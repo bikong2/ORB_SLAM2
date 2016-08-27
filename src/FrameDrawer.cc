@@ -33,6 +33,11 @@ FrameDrawer::FrameDrawer(Map* pMap):mpMap(pMap)
 {
     mState=Tracking::SYSTEM_NOT_READY;
     mIm = cv::Mat(480,640,CV_8UC3, cv::Scalar(0,0,0));
+    
+    //cv::namedWindow("Testing", CV_WINDOW_AUTOSIZE);
+    //cv::imshow("Testing", mIm);
+    //cv::waitKey();
+    //cv::destroyWindow("Testing");
 }
 
 cv::Mat FrameDrawer::DrawFrame()
@@ -120,6 +125,10 @@ cv::Mat FrameDrawer::DrawFrame()
 
     cv::Mat imWithInfo;
     DrawTextInfo(im,state, imWithInfo);
+
+    //cv::namedWindow("Testing", CV_WINDOW_AUTOSIZE);
+    //cv::imshow("Testing", imWithInfo);
+    //cv::waitKey(10);
 
     return imWithInfo;
 }

@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     cout << "Images in the sequence: " << nImages << endl << endl;
 
     // Image showing window
-    //cv::namedWindow("Slam_Show", CV_WINDOW_AUTOSIZE);
+    cv::namedWindow("Slam_Show", CV_WINDOW_AUTOSIZE);
 
     // Main loop
     cv::Mat im;
@@ -94,8 +94,8 @@ int main(int argc, char **argv)
 
         // Pass the image to the SLAM system
         SLAM.TrackMonocular(im, tframe);
-        //cv::imshow("Slam_Show", im);
-        //cv::waitKey(10);
+        cv::imshow("Slam_Show", im);
+        cv::waitKey(10);
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 #else
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 
     // Stop all threads
     SLAM.Shutdown();
-    //cv::destroyWindow("Slam_Show");
+    cv::destroyWindow("Slam_Show");
 
     // Tracking time statistics
     sort(vTimesTrack.begin(),vTimesTrack.end());

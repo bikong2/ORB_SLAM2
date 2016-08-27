@@ -302,7 +302,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
     if(dist<minDistance || dist>maxDistance)
         return false;
 
-   // Check viewing angle
+    // Check viewing angle
     cv::Mat Pn = pMP->GetNormal();
 
     const float viewCos = PO.dot(Pn)/dist;
