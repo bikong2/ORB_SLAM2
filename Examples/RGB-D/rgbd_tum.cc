@@ -65,8 +65,8 @@ int main(int argc, char **argv)
     }
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::RGBD, true);
-    //ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::RGBD, false);
+    //ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::RGBD, true);
+    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::RGBD, false);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     cout << "Start processing sequence ..." << endl;
     cout << "Images in the sequence: " << nImages << endl << endl;
 
-    //cv::namedWindow("Tracking", CV_WINDOW_AUTOSIZE);
+    cv::namedWindow("Tracking", CV_WINDOW_AUTOSIZE);
     // Main loop
     cv::Mat imRGB, imD;
     for(int ni=0; ni<nImages; ni++)
@@ -84,8 +84,8 @@ int main(int argc, char **argv)
         cout << "frames: " << ni << endl;
         // Read image and depthmap from file
         imRGB = cv::imread(string(argv[3])+"/"+vstrImageFilenamesRGB[ni],CV_LOAD_IMAGE_UNCHANGED);
-        //cv::imshow("Tracking", imRGB);
-        //cv::waitKey(5);
+        cv::imshow("Tracking", imRGB);
+        cv::waitKey(50);
         imD = cv::imread(string(argv[3])+"/"+vstrImageFilenamesD[ni],CV_LOAD_IMAGE_UNCHANGED);
         double tframe = vTimestamps[ni];
 
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 
     // Stop all threads
     SLAM.Shutdown();
-    //cv::destroyWindow("Tracking");
+    cv::destroyWindow("Tracking");
 
     // Tracking time statistics
     sort(vTimesTrack.begin(),vTimesTrack.end());

@@ -53,8 +53,8 @@ int main(int argc, char **argv)
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     // argv[1] == Vocabulary/ORBvoc.txt: trained out from a huge database, which is more or less a kind of generic
     // argv[2] == Examples/Monocular/TUMX.yaml: parameters and camera parameter
-    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true);
-    //ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, false);
+    //ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true);
+    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, false);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;
@@ -83,9 +83,6 @@ int main(int argc, char **argv)
             return 1;
         }
 
-        //cv::imshow("Slam_Show", im);
-        //cv::waitKey(10);
-
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 #else
@@ -95,7 +92,7 @@ int main(int argc, char **argv)
         // Pass the image to the SLAM system
         SLAM.TrackMonocular(im, tframe);
         cv::imshow("Slam_Show", im);
-        cv::waitKey(10);
+        cv::waitKey(50);
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 #else
