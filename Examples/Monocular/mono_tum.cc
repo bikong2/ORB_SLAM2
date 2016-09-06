@@ -31,12 +31,13 @@
 
 using namespace std;
 
-void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
-                vector<double> &vTimestamps);
+
+void DrawMapPoints(cv::Mat& im, cv::Mat pose, ORB_SLAM2::Tracking* mpTracker);
+void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vector<double> &vTimestamps);
 
 int main(int argc, char **argv)
 {
-    if(argc != 4)
+    if (argc != 4)
     {
         cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence" << endl;
         return 1;
@@ -66,6 +67,8 @@ int main(int argc, char **argv)
 
     // Image showing window
     cv::namedWindow("Slam_Show", CV_WINDOW_AUTOSIZE);
+    cv::Mat pose_;
+    int lost_counter = 0;
 
     // Main loop
     cv::Mat im;
@@ -90,9 +93,20 @@ int main(int argc, char **argv)
 #endif
 
         // Pass the image to the SLAM system
-        SLAM.TrackMonocular(im, tframe);
+        cv::Mat pose = SLAM.TrackMonocular(im, tframe);
+        if (!pose.empty()) {
+            pose_ = pose;
+            lost_counter = 0;
+        } else {
+            lost_counter++;
+            cout << "lost_counter: " << lost_counter << endl;
+        } 
+
+        if (!pose_.empty() && lost_counter < 60) {
+            DrawMapPoints(im, pose, SLAM.mpTracker);
+        }
         cv::imshow("Slam_Show", im);
-        cv::waitKey(50);
+        cv::waitKey(150);
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 #else
@@ -160,6 +174,50 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vecto
             string sRGB;
             ss >> sRGB;
             vstrImageFilenames.push_back(sRGB);
+        }
+    }
+}
+
+
+void DrawMapPoints(cv::Mat& im, cv::Mat pose, ORB_SLAM2::Tracking* mpTracker)
+{
+    cv::Mat rVec;
+    cv::Rodrigues(pose.colRange(0, 3).rowRange(0, 3), rVec);
+    cv::Mat tVec = pose.col(3).rowRange(0, 3);
+
+    const vector<ORB_SLAM2::MapPoint*> &vpMPs = mpTracker->mpMap->GetAllMapPoints();
+    const vector<ORB_SLAM2::MapPoint*> &vpRefMPs = mpTracker->mpMap->GetReferenceMapPoints();
+    set<ORB_SLAM2::MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
+
+    if (vpMPs.size() > 0) {
+        std::vector<cv::Point3f> allmappoints;
+        for (size_t i = 0, iend = vpMPs.size(); i < iend; i++) {
+            if (vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i])) continue;
+            cv::Point3f pos = cv::Point3f(vpMPs[i]->GetWorldPos());
+            allmappoints.push_back(pos);
+        }
+        if (allmappoints.size() > 0) {
+            std::vector<cv::Point2f> projectedPoints;
+            cv::projectPoints(allmappoints, rVec, tVec, mpTracker->mK, mpTracker->mDistCoef, projectedPoints);
+            for (size_t j = 0; j < projectedPoints.size(); ++j) {
+                cv::Point2f r1 = projectedPoints[j];
+                cv::circle(im, cv::Point(r1.x, r1.y), 2, cv::Scalar(255, 0, 0), 1, 8);
+            }
+        }
+
+        std::vector<cv::Point3f> refmappoints;
+        for (set<ORB_SLAM2::MapPoint*>::iterator sit = spRefMPs.begin(), send = spRefMPs.end(); sit != send; sit++) {
+            if ((*sit)->isBad()) continue;
+            cv::Point3f pos = cv::Point3f((*sit)->GetWorldPos());
+            refmappoints.push_back(pos);
+        }
+        if (refmappoints.size() > 0) {
+            std::vector<cv::Point2f> projectedPoints;
+            cv::projectPoints(refmappoints, rVec, tVec, mpTracker->mK, mpTracker->mDistCoef, projectedPoints);
+            for (size_t j = 0; j < projectedPoints.size(); ++j) {
+                cv::Point2f r1 = projectedPoints[j];
+                cv::circle(im, cv::Point(r1.x, r1.y), 2, cv::Scalar(0, 255, 0), 1, 8);
+            }
         }
     }
 }

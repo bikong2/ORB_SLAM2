@@ -51,7 +51,7 @@ public:
     std::map<KeyFrame*,size_t> GetObservations();
     int Observations();
 
-    void AddObservation(KeyFrame* pKF,size_t idx);
+    void AddObservation(KeyFrame* pKF, size_t idx);
     void EraseObservation(KeyFrame* pKF);
 
     int GetIndexInKeyFrame(KeyFrame* pKF);
@@ -63,12 +63,12 @@ public:
     void Replace(MapPoint* pMP);    
     MapPoint* GetReplaced();
 
-    void IncreaseVisible(int n=1);
-    void IncreaseFound(int n=1);
+    void IncreaseVisible(int n = 1);
+    void IncreaseFound(int n = 1);
     float GetFoundRatio();
-    inline int GetFound(){
+    inline int GetFound() {
         return mnFound;
-    }
+    } 
 
     void ComputeDistinctiveDescriptors();
 

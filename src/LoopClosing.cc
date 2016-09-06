@@ -37,9 +37,7 @@ namespace ORB_SLAM2
 {
 
 LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale):
-    mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
-    mpKeyFrameDB(pDB), mpORBVocabulary(pVoc), mLastLoopKFid(0), mbRunningGBA(false), mbFinishedGBA(true),
-    mbStopGBA(false), mbFixScale(bFixScale)
+    mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap), mpKeyFrameDB(pDB), mpORBVocabulary(pVoc), mLastLoopKFid(0), mbRunningGBA(false), mbFinishedGBA(true), mbStopGBA(false), mbFixScale(bFixScale)
 {
     mnCovisibilityConsistencyTh = 3;
     mpMatchedKF = NULL;
@@ -47,32 +45,32 @@ LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, 
 
 void LoopClosing::SetTracker(Tracking *pTracker)
 {
-    mpTracker=pTracker;
+    mpTracker = pTracker;
 }
 
 void LoopClosing::SetLocalMapper(LocalMapping *pLocalMapper)
 {
-    mpLocalMapper=pLocalMapper;
+    mpLocalMapper = pLocalMapper;
 }
 
 
 void LoopClosing::Run()
 {
-    mbFinished =false;
+    mbFinished = false;
 
-    while(1)
+    while (1)
     {
         // Check if there are keyframes in the queue
-        if(CheckNewKeyFrames())
+        if (CheckNewKeyFrames())
         {
-            // Detect loop candidates and check covisibility consistency
-            if(DetectLoop())
+            // 01. Detect loop candidates and check covisibility consistency
+            if (DetectLoop())
             {
-               // Compute similarity transformation [sR|t]
+               // 02. Compute similarity transformation [sR|t]
                // In the stereo/RGBD case s=1
-               if(ComputeSim3())
+               if (ComputeSim3())
                {
-                   // Perform loop fusion and pose graph optimization
+                   // 03. Perform loop fusion and pose graph optimization
                    CorrectLoop();
                }
             }
@@ -80,26 +78,23 @@ void LoopClosing::Run()
 
         ResetIfRequested();
 
-        if(CheckFinish())
-            break;
-
+        if (CheckFinish()) break;
         usleep(5000);
     }
-
     SetFinish();
 }
 
 void LoopClosing::InsertKeyFrame(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutexLoopQueue);
-    if(pKF->mnId!=0)
+    if (pKF->mnId != 0)
         mlpLoopKeyFrameQueue.push_back(pKF);
 }
 
 bool LoopClosing::CheckNewKeyFrames()
 {
     unique_lock<mutex> lock(mMutexLoopQueue);
-    return(!mlpLoopKeyFrameQueue.empty());
+    return (!mlpLoopKeyFrameQueue.empty());
 }
 
 bool LoopClosing::DetectLoop()

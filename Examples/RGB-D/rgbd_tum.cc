@@ -32,12 +32,13 @@
 using namespace std;
 
 // image_path + image_time
-void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB,
-                vector<string> &vstrImageFilenamesD, vector<double> &vTimestamps);
+void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB, vector<string> &vstrImageFilenamesD, vector<double> &vTimestamps);
+
+void DrawMapPoints(cv::Mat& im, cv::Mat pose, ORB_SLAM2::Tracking* mpTracker);
 
 int main(int argc, char **argv)
 {
-    if(argc != 5)
+    if (argc != 5)
     {
         cerr << endl << "Usage: ./rgbd_tum path_to_vocabulary path_to_settings path_to_sequence path_to_association" << endl;
         return 1;
@@ -49,16 +50,17 @@ int main(int argc, char **argv)
     vector<double> vTimestamps;
     string strAssociationFilename = string(argv[4]);
     LoadImages(strAssociationFilename, vstrImageFilenamesRGB, vstrImageFilenamesD, vTimestamps);
-    cout << "LoadImage OK!!!" << endl;
+    cout << "LoadImage path to vector<string> OK!!!" << endl;
+
 
     // Check consistency in the number of images and depthmaps
     int nImages = vstrImageFilenamesRGB.size();
-    if(vstrImageFilenamesRGB.empty())
+    if (vstrImageFilenamesRGB.empty())
     {
         cerr << endl << "No images found in provided path." << endl;
         return 1;
     }
-    else if(vstrImageFilenamesD.size()!=vstrImageFilenamesRGB.size())
+    else if (vstrImageFilenamesD.size() != vstrImageFilenamesRGB.size())
     {
         cerr << endl << "Different number of images for rgb and depth." << endl;
         return 1;
@@ -79,20 +81,17 @@ int main(int argc, char **argv)
     cv::namedWindow("Tracking", CV_WINDOW_AUTOSIZE);
     // Main loop
     cv::Mat imRGB, imD;
-    for(int ni=0; ni<nImages; ni++)
+    for (int ni = 0; ni < nImages; ni++)
     {
         cout << "frames: " << ni << endl;
         // Read image and depthmap from file
-        imRGB = cv::imread(string(argv[3])+"/"+vstrImageFilenamesRGB[ni],CV_LOAD_IMAGE_UNCHANGED);
-        cv::imshow("Tracking", imRGB);
-        cv::waitKey(50);
-        imD = cv::imread(string(argv[3])+"/"+vstrImageFilenamesD[ni],CV_LOAD_IMAGE_UNCHANGED);
+        imRGB = cv::imread(string(argv[3])+"/"+vstrImageFilenamesRGB[ni], CV_LOAD_IMAGE_UNCHANGED);
+        imD = cv::imread(string(argv[3])+"/"+vstrImageFilenamesD[ni], CV_LOAD_IMAGE_UNCHANGED);
         double tframe = vTimestamps[ni];
 
-        if(imRGB.empty())
+        if (imRGB.empty())
         {
-            cerr << endl << "Failed to load image at: "
-                 << string(argv[3]) << "/" << vstrImageFilenamesRGB[ni] << endl;
+            cerr << endl << "Failed to load image at: " << string(argv[3]) << "/" << vstrImageFilenamesRGB[ni] << endl;
             return 1;
         }
 
@@ -103,7 +102,12 @@ int main(int argc, char **argv)
 #endif
 
         // Pass the image to the SLAM system
-        SLAM.TrackRGBD(imRGB,imD,tframe);
+        cv::Mat pose = SLAM.TrackRGBD(imRGB, imD, tframe);
+        if (!pose.empty()) {
+            DrawMapPoints(imRGB, pose, SLAM.mpTracker);
+        }
+        cv::imshow("Tracking", imRGB);
+        cv::waitKey(50);
 
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -111,19 +115,18 @@ int main(int argc, char **argv)
         std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
 #endif
 
-        double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+        double ttrack = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
 
-        vTimesTrack[ni]=ttrack;
+        vTimesTrack[ni] = ttrack;
 
         // Wait to load the next frame
-        double T=0;
-        if(ni<nImages-1)
-            T = vTimestamps[ni+1]-tframe;
-        else if(ni>0)
-            T = tframe-vTimestamps[ni-1];
+        double T = 0;
+        if (ni < nImages-1)
+            T = vTimestamps[ni+1] - tframe;     // timediff between next frame and this frame
+        else if (ni > 0)
+            T = tframe - vTimestamps[ni-1];
 
-        if(ttrack<T)
-            usleep((T-ttrack)*1e6);
+        if (ttrack < T) usleep((T-ttrack)*1e6); // if tracking time between 2 frames is less than timestamp diff
     }
 
     // Stop all threads
@@ -131,11 +134,11 @@ int main(int argc, char **argv)
     cv::destroyWindow("Tracking");
 
     // Tracking time statistics
-    sort(vTimesTrack.begin(),vTimesTrack.end());
+    sort(vTimesTrack.begin(), vTimesTrack.end());
     float totaltime = 0;
-    for(int ni=0; ni<nImages; ni++)
+    for (int ni = 0; ni < nImages; ni++)
     {
-        totaltime+=vTimesTrack[ni];
+        totaltime += vTimesTrack[ni];
     }
     cout << "-------" << endl << endl;
     cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
@@ -147,17 +150,14 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB,
-                vector<string> &vstrImageFilenamesD, vector<double> &vTimestamps)
+void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB, vector<string> &vstrImageFilenamesD, vector<double> &vTimestamps)
 {
     ifstream fAssociation;
     fAssociation.open(strAssociationFilename.c_str());
-    while (!fAssociation.eof())
-    {
+    while (!fAssociation.eof()) {
         string s;
         getline(fAssociation,s);
-        if(!s.empty())
-        {
+        if (!s.empty()) {
             stringstream ss;
             ss << s;
             double t;
@@ -169,6 +169,49 @@ void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageF
             ss >> t;
             ss >> sD;
             vstrImageFilenamesD.push_back(sD);
+        }
+    }
+}
+
+void DrawMapPoints(cv::Mat& im, cv::Mat pose, ORB_SLAM2::Tracking* mpTracker)
+{
+    cv::Mat rVec;
+    cv::Rodrigues(pose.colRange(0, 3).rowRange(0, 3), rVec);
+    cv::Mat tVec = pose.col(3).rowRange(0, 3);
+
+    const vector<ORB_SLAM2::MapPoint*> &vpMPs = mpTracker->mpMap->GetAllMapPoints();
+    const vector<ORB_SLAM2::MapPoint*> &vpRefMPs = mpTracker->mpMap->GetReferenceMapPoints();
+    set<ORB_SLAM2::MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
+
+    if (vpMPs.size() > 0) {
+        std::vector<cv::Point3f> allmappoints;
+        for (size_t i = 0, iend = vpMPs.size(); i < iend; i++) {
+            if (vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i])) continue;
+            cv::Point3f pos = cv::Point3f(vpMPs[i]->GetWorldPos());
+            allmappoints.push_back(pos);
+        }
+        if (allmappoints.size() > 0) {
+            std::vector<cv::Point2f> projectedPoints;
+            cv::projectPoints(allmappoints, rVec, tVec, mpTracker->mK, mpTracker->mDistCoef, projectedPoints);
+            for (size_t j = 0; j < projectedPoints.size(); ++j) {
+                cv::Point2f r1 = projectedPoints[j];
+                cv::circle(im, cv::Point(r1.x, r1.y), 2, cv::Scalar(255, 0, 0), 1, 8);
+            }
+        }
+
+        std::vector<cv::Point3f> refmappoints;
+        for (set<ORB_SLAM2::MapPoint*>::iterator sit = spRefMPs.begin(), send = spRefMPs.end(); sit != send; sit++) {
+            if ((*sit)->isBad()) continue;
+            cv::Point3f pos = cv::Point3f((*sit)->GetWorldPos());
+            refmappoints.push_back(pos);
+        }
+        if (refmappoints.size() > 0) {
+            std::vector<cv::Point2f> projectedPoints;
+            cv::projectPoints(refmappoints, rVec, tVec, mpTracker->mK, mpTracker->mDistCoef, projectedPoints);
+            for (size_t j = 0; j < projectedPoints.size(); ++j) {
+                cv::Point2f r1 = projectedPoints[j];
+                cv::circle(im, cv::Point(r1.x, r1.y), 2, cv::Scalar(0, 255, 0), 1, 8);
+            }
         }
     }
 }

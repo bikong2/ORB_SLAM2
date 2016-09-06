@@ -47,13 +47,9 @@ public:
     void Run();
 
     void RequestFinish();
-
     void RequestStop();
-
     bool isFinished();
-
     bool isStopped();
-
     void Release();
 
 private:
@@ -87,5 +83,3 @@ private:
 
 
 #endif // VIEWER_H
-	
-

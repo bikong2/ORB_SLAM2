@@ -30,9 +30,8 @@
 namespace ORB_SLAM2
 {
 
-LocalMapping::LocalMapping(Map *pMap, const float bMonocular):
-    mbMonocular(bMonocular), mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
-    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true)
+LocalMapping::LocalMapping(Map *pMap, const float bMonocular): 
+    mbMonocular(bMonocular), mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap), mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true)
 {
 }
 
@@ -43,60 +42,58 @@ void LocalMapping::SetLoopCloser(LoopClosing* pLoopCloser)
 
 void LocalMapping::SetTracker(Tracking *pTracker)
 {
-    mpTracker=pTracker;
+    mpTracker = pTracker;
 }
 
 void LocalMapping::Run()
 {
-
     mbFinished = false;
 
-    while(1)
+    while (1)
     {
         // Tracking will see that Local Mapping is busy
         SetAcceptKeyFrames(false);
 
         // Check if there are keyframes in the queue
-        if(CheckNewKeyFrames())
+        if (CheckNewKeyFrames())
         {
-            // BoW conversion and insertion in Map
+            // 01. BoW conversion and insertion in Map
             ProcessNewKeyFrame();
 
-            // Check recent MapPoints
+            // 02. Check recent MapPoints, culling bad points
             MapPointCulling();
 
-            // Triangulate new MapPoints
+            // 03. Triangulate new MapPoints
             CreateNewMapPoints();
 
-            if(!CheckNewKeyFrames())
+            if (!CheckNewKeyFrames())
             {
-                // Find more matches in neighbor keyframes and fuse point duplications
+                // 04. Find more matches in neighbor keyframes and fuse point duplications
                 SearchInNeighbors();
             }
 
             mbAbortBA = false;
 
-            if(!CheckNewKeyFrames() && !stopRequested())
+            if (!CheckNewKeyFrames() && !stopRequested())
             {
-                // Local BA
-                if(mpMap->KeyFramesInMap()>2)
-                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
+                // 05. Local BA
+                if (mpMap->KeyFramesInMap() > 2)
+                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame, &mbAbortBA, mpMap);
 
-                // Check redundant local Keyframes
+                // 06. Check redundant local Keyframes
                 KeyFrameCulling();
             }
 
             mpLoopCloser->InsertKeyFrame(mpCurrentKeyFrame);
         }
-        else if(Stop())
+        else if (Stop())
         {
             // Safe area to stop
-            while(isStopped() && !CheckFinish())
+            while (isStopped() && !CheckFinish())
             {
                 usleep(3000);
             }
-            if(CheckFinish())
-                break;
+            if (CheckFinish()) break;
         }
 
         ResetIfRequested();
@@ -104,9 +101,7 @@ void LocalMapping::Run()
         // Tracking will see that Local Mapping is busy
         SetAcceptKeyFrames(true);
 
-        if(CheckFinish())
-            break;
-
+        if (CheckFinish()) break;
         usleep(3000);
     }
 
@@ -117,14 +112,14 @@ void LocalMapping::InsertKeyFrame(KeyFrame *pKF)
 {
     unique_lock<mutex> lock(mMutexNewKFs);
     mlNewKeyFrames.push_back(pKF);
-    mbAbortBA=true;
+    mbAbortBA = true;
 }
 
 
 bool LocalMapping::CheckNewKeyFrames()
 {
     unique_lock<mutex> lock(mMutexNewKFs);
-    return(!mlNewKeyFrames.empty());
+    return (!mlNewKeyFrames.empty());
 }
 
 void LocalMapping::ProcessNewKeyFrame()
@@ -141,14 +136,14 @@ void LocalMapping::ProcessNewKeyFrame()
     // Associate MapPoints to the new keyframe and update normal and descriptor
     const vector<MapPoint*> vpMapPointMatches = mpCurrentKeyFrame->GetMapPointMatches();
 
-    for(size_t i=0; i<vpMapPointMatches.size(); i++)
+    for (size_t i = 0; i < vpMapPointMatches.size(); i++)
     {
         MapPoint* pMP = vpMapPointMatches[i];
-        if(pMP)
+        if (pMP)
         {
-            if(!pMP->isBad())
+            if (!pMP->isBad())
             {
-                if(!pMP->IsInKeyFrame(mpCurrentKeyFrame))
+                if (!pMP->IsInKeyFrame(mpCurrentKeyFrame))
                 {
                     pMP->AddObservation(mpCurrentKeyFrame, i);
                     pMP->UpdateNormalAndDepth();
@@ -611,7 +606,7 @@ bool LocalMapping::AcceptKeyFrames()
 void LocalMapping::SetAcceptKeyFrames(bool flag)
 {
     unique_lock<mutex> lock(mMutexAccept);
-    mbAcceptKeyFrames=flag;
+    mbAcceptKeyFrames = flag;
 }
 
 bool LocalMapping::SetNotStop(bool flag)
